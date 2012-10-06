@@ -158,8 +158,9 @@ def runMonteCarlo(size, N):
     # size = FSM states
     # N = Monte Carlo iterations
     max = 2**programSize(size)
+    width = int(math.ceil(math.log(max,10)))
     bits = minBits(max)
-    freq = [0] * max
+    freq = {}
     fsm = FSMachine(size)
     rnd = random.Random()
     
@@ -167,22 +168,28 @@ def runMonteCarlo(size, N):
         program = Tape(rnd.randint(0, max-1))
         input = Tape(rnd.randint(0, max-1))
         output = fsm.execute(program, input, bits)
-        freq[int(output)] += 1
-        #if (i%10000 == 0): sys.stdout.write('.') 
-      
-    hits = misses = 0
-    for i in range(len(freq)):
-        f = freq[i]
-        if f > 0:
-            hits += 1
-            t = Tape(i)
-            print "{0:5d} {1:6.5f} {2:8d} {3}".format(i, float(f)/N, f, t)
+        val = int(output)
+        if freq.has_key(val):
+            freq[val] += 1
         else:
-            misses += 1
-    total = hits+misses
+            freq[val] = 1
+        #if (i%10000 == 0): sys.stdout.write('.') 
+    
+    vals = freq.keys()
+    vals.sort()
+    
+    formatstr = "{0:" + str(width) + "d} {1:6.5f} {2:8d} {3}"
+    for i in vals:
+        f = freq[i]
+        t = Tape(i)
+        print formatstr.format(i, float(f)/N, f, t)
+
+    hits = len(freq)
+    total = max
+    misses = max-hits
     print "hits: {0} ({1:.2f}%) misses: {2} ({3:.2f}%) total: {4}".format(hits, 100.*hits/total, misses, 100.*misses/total, total)   
     space = max**2
-    print "{0:.6f}% sampled of space {1:e}".format(100.*N/space, space)
+    print "{0:e} fraction sampled of space {1:e}".format(1.*N/space, space)
     
 def sizeTable():
     for i in range(1,65):
@@ -194,8 +201,7 @@ def sizeTable():
 #runMachine(4, tapes[254:255], tapes[130:135])
 #runMachine(1, tapes, tapes)
 
-#runMonteCarlo(256, 2, 1000000)
-runMonteCarlo(3, 20000)
+runMonteCarlo(10, 1000)
               
 #code.interact(local=locals())
             
