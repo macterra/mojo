@@ -86,6 +86,13 @@ class Tape:
             
         return s        
 
+    def fixedWidth(self, n):
+        s = str(self)
+        fill = n - len(s)
+        if fill > 0:
+            s = "0" * fill + s
+        return s    
+        
 rnd = random.Random()
 
 class Action:
@@ -182,7 +189,7 @@ def runMonteCarlo(size, N):
     for i in vals:
         f = freq[i]
         t = Tape(i)
-        print formatstr.format(i, float(f)/N, f, t)
+        print formatstr.format(i, float(f)/N, f, t.fixedWidth(bits))
 
     hits = len(freq)
     total = max
@@ -190,6 +197,7 @@ def runMonteCarlo(size, N):
     print "hits: {0} ({1:.2f}%) misses: {2} ({3:.2f}%) total: {4}".format(hits, 100.*hits/total, misses, 100.*misses/total, total)   
     space = max**2
     print "{0:e} fraction sampled of space {1:e}".format(1.*N/space, space)
+    print "strangeness {0:.4f} ({1:d} attractors)".format(1.*(N-hits)/N, N-hits)
     
 def sizeTable():
     for i in range(1,65):
@@ -201,7 +209,7 @@ def sizeTable():
 #runMachine(4, tapes[254:255], tapes[130:135])
 #runMachine(1, tapes, tapes)
 
-runMonteCarlo(10, 1000)
+runMonteCarlo(10, 1000000)
               
 #code.interact(local=locals())
             
