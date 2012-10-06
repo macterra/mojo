@@ -1,12 +1,18 @@
-import code, random
+import sys, code, random, math
 
 def binary(x):
     if (x == 1 or x == 0):
         return str(x)
     else:
         return binary(int(x/2)) + str(x % 2)
-     
 
+def minBits(n):
+    return int(math.ceil(math.log(n,2)))
+    
+def programSize(n):
+    b = minBits(n)
+    return 2 * n * (b+1)
+    
 class Tape:
     def __init__(self, x):
         self.init(x)
@@ -83,40 +89,35 @@ class Tape:
 rnd = random.Random()
 
 class Action:
-    def __init__(self, bits, tape):
-        #if True:
-        #if rnd.choice([0,1]):
-        if tape.peek(): 
-            self.output = tape.read()
-            self.next = tape.readInt(bits) 
-        else:
-            self.next = tape.readInt(bits)
-            self.output = tape.read()
+    def __init__(self, bits, states, tape):
+        self.output = tape.read()
+        self.next = tape.readInt(bits) % states
         
     def __repr__(self):
         return "out: {0} next: {1}".format(self.output, self.next)
         
-class TMachine:
-    def __init__(self, bits):
-        self.bits = bits
-        self.size = 2**bits
+class FSMachine:
+    def __init__(self, states):
+        self.size = states
+        self.bits = int(math.ceil(math.log(states,2)))
         self.state = 0
         self.states = []
         
     def read(self, program):
-        # an N bit TMachine will read (2**N)*(2N+2) bits from the program to initialize its FSM
+        # an N state FSMachine will read 2N*(bits+1) bits from the program to initialize its FSM
+        # where bits is number of bits needed to store N 
         self.states = []        
-        print "reading {0} states from {1}".format(self.size, program)        
+        #print "reading {0} states from {1}".format(self.size, program)        
         program.seek(0)
         
         for i in range(self.size):
-            act0 = Action(self.bits, program)
-            act1 = Action(self.bits, program)
+            act0 = Action(self.bits, self.size, program)
+            act1 = Action(self.bits, self.size, program)
             self.states.append([act0, act1])        
         
     def execute(self, program, input, steps):
         self.read(program)
-        print self.states
+        #print self.states
         
         self.state = 0        
         input.seek(0)
@@ -127,7 +128,7 @@ class TMachine:
             # print i, act
             output.write(act.output)
             self.state = act.next
-        print "running {0} on {1} yielded {2}".format(program, input, output)
+        #print "running {0} on {1} yielded {2}".format(program, input, output)
         return output  
             
 
@@ -143,19 +144,59 @@ for i in range(SIZE):
 #print tapes    
 
 def runMachine(size, programs, inputs):    
-    tm = TMachine(size)
+    fsm = FSMachine(size)
 
     for p in programs:
         for i in inputs:
-            output = tm.execute(p, i, BITS)
+            output = fsm.execute(p, i, BITS)
             freq[int(output)] += 1
-
-runMachine(1, tapes[130:131], tapes)
-#runMachine(1, tapes, tapes)
             
-for (t, f) in zip(tapes, freq):
-    print int(t), t, f
+    for (t, f) in zip(tapes, freq):
+        print int(t), t, f
+        
+def runMonteCarlo(size, N):
+    # size = FSM states
+    # N = Monte Carlo iterations
+    max = 2**programSize(size)
+    bits = minBits(max)
+    freq = [0] * max
+    fsm = FSMachine(size)
+    rnd = random.Random()
     
+    for i in range(N):
+        program = Tape(rnd.randint(0, max-1))
+        input = Tape(rnd.randint(0, max-1))
+        output = fsm.execute(program, input, bits)
+        freq[int(output)] += 1
+        #if (i%10000 == 0): sys.stdout.write('.') 
+      
+    hits = misses = 0
+    for i in range(len(freq)):
+        f = freq[i]
+        if f > 0:
+            hits += 1
+            t = Tape(i)
+            print "{0:5d} {1:6.5f} {2:8d} {3}".format(i, float(f)/N, f, t)
+        else:
+            misses += 1
+    total = hits+misses
+    print "hits: {0} ({1:.2f}%) misses: {2} ({3:.2f}%) total: {4}".format(hits, 100.*hits/total, misses, 100.*misses/total, total)   
+    space = max**2
+    print "{0:.6f}% sampled of space {1:e}".format(100.*N/space, space)
+    
+def sizeTable():
+    for i in range(1,65):
+        s = programSize(i)
+        print "{0:3d} {1:3d} {2:e}".format(i, s, 2**s)
+
+#sizeTable()
+        
+#runMachine(4, tapes[254:255], tapes[130:135])
+#runMachine(1, tapes, tapes)
+
+#runMonteCarlo(256, 2, 1000000)
+runMonteCarlo(3, 20000)
+              
 #code.interact(local=locals())
             
             
