@@ -96,9 +96,9 @@ class Tape:
 rnd = random.Random()
 
 class Action:
-    def __init__(self, bits, states, tape):
+    def __init__(self, bits, tape):
         self.output = tape.read()
-        self.next = tape.readInt(bits) % states
+        self.next = tape.readInt(bits)
         
     def __repr__(self):
         return "out: {0} next: {1}".format(self.output, self.next)
@@ -106,7 +106,7 @@ class Action:
 class FSMachine:
     def __init__(self, states):
         self.size = states
-        self.bits = int(math.ceil(math.log(states,2)))
+        self.bits = minBits(states)
         self.state = 0
         self.states = []
         
@@ -118,8 +118,8 @@ class FSMachine:
         program.seek(0)
         
         for i in range(self.size):
-            act0 = Action(self.bits, self.size, program)
-            act1 = Action(self.bits, self.size, program)
+            act0 = Action(self.bits, program)
+            act1 = Action(self.bits, program)
             self.states.append([act0, act1])        
         
     def execute(self, program, input, steps):
@@ -128,13 +128,13 @@ class FSMachine:
         
         self.state = 0        
         input.seek(0)
-        output = Tape(1)
+        output = Tape(0)
         
         for i in range(steps):
             act = self.states[self.state][input.read()]
             # print i, act
             output.write(act.output)
-            self.state = act.next
+            self.state = act.next % self.size
         #print "running {0} on {1} yielded {2}".format(program, input, output)
         return output  
             
@@ -169,7 +169,7 @@ def runMonteCarlo(size, N):
     bits = minBits(max)
     freq = {}
     fsm = FSMachine(size)
-    rnd = random.Random()
+    rnd = random.Random(0)
     
     for i in range(N):
         program = Tape(rnd.randint(0, max-1))
@@ -186,18 +186,22 @@ def runMonteCarlo(size, N):
     vals.sort()
     
     formatstr = "{0:" + str(width) + "d} {1:6.5f} {2:8d} {3}"
+    attractors = 0
+    
     for i in vals:
         f = freq[i]
         t = Tape(i)
         print formatstr.format(i, float(f)/N, f, t.fixedWidth(bits))
+        if f > 1:
+            attractors += 1
 
     hits = len(freq)
     total = max
     misses = max-hits
     print "hits: {0} ({1:.2f}%) misses: {2} ({3:.2f}%) total: {4}".format(hits, 100.*hits/total, misses, 100.*misses/total, total)   
     space = max**2
-    print "{0:e} fraction sampled of space {1:e}".format(1.*N/space, space)
-    print "strangeness {0:.4f} ({1:d} attractors)".format(1.*(N-hits)/N, N-hits)
+    print "{0:e} fraction sampled of space {1:e} with {2} samples".format(1.*N/space, space, N)
+    print "strangeness {0:.4f} ({1:d} attractors)".format(1.*attractors/max, attractors)
     
 def sizeTable():
     for i in range(1,65):
@@ -209,7 +213,7 @@ def sizeTable():
 #runMachine(4, tapes[254:255], tapes[130:135])
 #runMachine(1, tapes, tapes)
 
-runMonteCarlo(10, 1000000)
+runMonteCarlo(10, 1000)
               
 #code.interact(local=locals())
             
