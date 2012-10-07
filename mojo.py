@@ -112,8 +112,7 @@ class FSMachine:
         self.actions = []
         
     def programSize(self):
-        b = minBits(self.states)
-        return 2 * self.states * (b+1)
+        return 2 * self.states * (self.bits+1)
     
     def read(self, program):
         # an N state FSMachine will read 2N*(bits+1) bits from the program to initialize its FSM
@@ -146,37 +145,44 @@ class FSMachine:
 class StackAction:
     def __init__(self, bits, tape):
         self.output = tape.read()
-        self.next = tape.readInt(bits)
         self.op = tape.readInt(2)
+        self.next = tape.readInt(bits)
         
     def __repr__(self):
-        return "out: {0} next: {1}".format(self.output, self.next)
+        return "<out: {0} op: {1} next: {2}>".format(self.output, self.op, self.next)
         
 class StackMachine:
     def __init__(self, states):
-        self.size = states
+        self.states = states
         self.bits = minBits(states)
+        
+    def reset(self):    
         self.state = 0
-        self.states = []
+        self.actions = []
         self.stack = Tape(0)
+        
+    def programSize(self):
+        return 4 * self.states * (self.bits+3)
         
     def read(self, program):
         # an N state FSMachine will read 2N*(bits+1) bits from the program to initialize its FSM
         # where bits is number of bits needed to store N 
-        self.states = []        
-        #print "reading {0} states from {1}".format(self.size, program)        
+        
+        self.reset()
+        
+        #print "reading {0} states from {1}".format(self.states, program)        
         program.seek(0)
         
-        for i in range(self.size):
+        for i in range(self.states):
             act0 = StackAction(self.bits, program)
             act1 = StackAction(self.bits, program)
             act2 = StackAction(self.bits, program)
             act3 = StackAction(self.bits, program)
-            self.states.append([act0, act1, act2, act3])        
+            self.actions.append([act0, act1, act2, act3])        
         
     def execute(self, program, input, steps):
         self.read(program)
-        #print self.states
+        #print self.actions
         
         self.state = 0        
         input.seek(0)
@@ -185,11 +191,12 @@ class StackMachine:
         for i in range(steps):
             inbit = input.read()
             stbit = self.stack.peek()
+            inputs = inbit<<1|stbit
             
-            act = self.states[self.state][inbit<<1|stbit]
-            # print i, act
+            act = self.actions[self.state][inputs]
+            #print i, act
             output.write(act.output)
-            self.state = act.next % self.size
+            self.state = act.next % self.states
             
             if act.op == 0:
                 pass # no-op
@@ -255,8 +262,8 @@ def runMonteCarlo(machine, N):
     for i in vals:
         f = freq[i]
         t = Tape(i)
-        print formatstr.format(i, float(f)/N, f, t.fixedWidth(bits))
         if f > 1:
+            print formatstr.format(i, float(f)/N, f, t.fixedWidth(bits))
             attractors += 1
 
     hits = len(freq)
@@ -277,8 +284,8 @@ def sizeTable():
 #runMachine(4, tapes[254:255], tapes[130:135])
 #runMachine(1, tapes, tapes)
 
-fsm = FSMachine(10)
-runMonteCarlo(fsm, 1000)
+#runMonteCarlo(FSMachine(2), 1000)
+runMonteCarlo(StackMachine(2), 100000)
               
 #code.interact(local=locals())
             
