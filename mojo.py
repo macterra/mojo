@@ -96,7 +96,7 @@ class Tape:
         
 rnd = random.Random()
 
-class Action:
+class FSAction:
     def __init__(self, bits, tape):
         self.output = tape.read()
         self.next = tape.readInt(bits)
@@ -106,40 +106,40 @@ class Action:
         
 class FSMachine:
     def __init__(self, states):
-        self.size = states
+        self.states = states
         self.bits = minBits(states)
         self.state = 0
-        self.states = []
+        self.actions = []
         
     def programSize(self):
-        b = minBits(self.size)
-        return 2 * self.size * (b+1)
+        b = minBits(self.states)
+        return 2 * self.states * (b+1)
     
     def read(self, program):
         # an N state FSMachine will read 2N*(bits+1) bits from the program to initialize its FSM
         # where bits is number of bits needed to store N 
-        self.states = []        
-        #print "reading {0} states from {1}".format(self.size, program)        
+        self.actions = []        
+        #print "reading {0} states from {1}".format(self.states, program)        
         program.seek(0)
         
-        for i in range(self.size):
-            act0 = Action(self.bits, program)
-            act1 = Action(self.bits, program)
-            self.states.append([act0, act1])        
+        for i in range(self.states):
+            act0 = FSAction(self.bits, program)
+            act1 = FSAction(self.bits, program)
+            self.actions.append([act0, act1])        
         
     def execute(self, program, input, steps):
         self.read(program)
-        #print self.states
+        #print self.actions
         
         self.state = 0        
         input.seek(0)
         output = Tape(0)
         
         for i in range(steps):
-            act = self.states[self.state][input.read()]
+            act = self.actions[self.state][input.read()]
             #print i, act
             output.write(act.output)
-            self.state = act.next % self.size
+            self.state = act.next % self.states
         #print "running {0} on {1} yielded {2}".format(program, input, output)
         return output  
      
