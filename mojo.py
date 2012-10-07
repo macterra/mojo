@@ -1,18 +1,11 @@
 import sys, code, random, math
 
-def binary(x):
-    if (x == 1 or x == 0):
-        return str(x)
-    else:
-        return binary(int(x/2)) + str(x % 2)
-
+def binary(s):
+    return str(s) if s<=1 else binary(s>>1) + str(s&1)
+          
 def minBits(n):
     return int(math.ceil(math.log(n,2)))
-    
-def programSize(n):
-    b = minBits(n)
-    return 2 * n * (b+1)
-    
+        
 class Tape:
     def __init__(self, x):
         self.init(x)
@@ -92,6 +85,14 @@ class Tape:
         if fill > 0:
             s = "0" * fill + s
         return s    
+
+    def push(self, x):
+        self.tape = ('1' if x else '0') + self.tape
+        
+    def pop(self):
+        bit = self[0]
+        self.tape = self.tape[1:]
+        return bit
         
 rnd = random.Random()
 
@@ -110,6 +111,10 @@ class FSMachine:
         self.state = 0
         self.states = []
         
+    def programSize(self):
+        b = minBits(self.size)
+        return 2 * self.size * (b+1)
+    
     def read(self, program):
         # an N state FSMachine will read 2N*(bits+1) bits from the program to initialize its FSM
         # where bits is number of bits needed to store N 
@@ -132,13 +137,72 @@ class FSMachine:
         
         for i in range(steps):
             act = self.states[self.state][input.read()]
-            # print i, act
+            #print i, act
             output.write(act.output)
             self.state = act.next % self.size
         #print "running {0} on {1} yielded {2}".format(program, input, output)
         return output  
+     
+class StackAction:
+    def __init__(self, bits, tape):
+        self.output = tape.read()
+        self.next = tape.readInt(bits)
+        self.op = tape.readInt(2)
+        
+    def __repr__(self):
+        return "out: {0} next: {1}".format(self.output, self.next)
+        
+class StackMachine:
+    def __init__(self, states):
+        self.size = states
+        self.bits = minBits(states)
+        self.state = 0
+        self.states = []
+        self.stack = Tape(0)
+        
+    def read(self, program):
+        # an N state FSMachine will read 2N*(bits+1) bits from the program to initialize its FSM
+        # where bits is number of bits needed to store N 
+        self.states = []        
+        #print "reading {0} states from {1}".format(self.size, program)        
+        program.seek(0)
+        
+        for i in range(self.size):
+            act0 = StackAction(self.bits, program)
+            act1 = StackAction(self.bits, program)
+            act2 = StackAction(self.bits, program)
+            act3 = StackAction(self.bits, program)
+            self.states.append([act0, act1, act2, act3])        
+        
+    def execute(self, program, input, steps):
+        self.read(program)
+        #print self.states
+        
+        self.state = 0        
+        input.seek(0)
+        output = Tape(0)
+        
+        for i in range(steps):
+            inbit = input.read()
+            stbit = self.stack.peek()
             
-
+            act = self.states[self.state][inbit<<1|stbit]
+            # print i, act
+            output.write(act.output)
+            self.state = act.next % self.size
+            
+            if act.op == 0:
+                pass # no-op
+            elif act.op == 1:
+                self.stack.pop()
+            elif act.op == 2:
+                self.stack.push(0)
+            elif act.op == 3:
+                self.stack.push(1)
+                
+        #print "running {0} on {1} yielded {2}".format(program, input, output)
+        return output  
+    
 BITS = 8
 SIZE = 2**BITS
 
@@ -161,20 +225,18 @@ def runMachine(size, programs, inputs):
     for (t, f) in zip(tapes, freq):
         print int(t), t, f
         
-def runMonteCarlo(size, N):
-    # size = FSM states
+def runMonteCarlo(machine, N):
+    # machine =
     # N = Monte Carlo iterations
-    max = 2**programSize(size)
-    width = int(math.ceil(math.log(max,10)))
+    max = 2**machine.programSize()
     bits = minBits(max)
     freq = {}
-    fsm = FSMachine(size)
     rnd = random.Random(0)
     
     for i in range(N):
         program = Tape(rnd.randint(0, max-1))
         input = Tape(rnd.randint(0, max-1))
-        output = fsm.execute(program, input, bits)
+        output = machine.execute(program, input, bits)
         val = int(output)
         if freq.has_key(val):
             freq[val] += 1
@@ -182,11 +244,13 @@ def runMonteCarlo(size, N):
             freq[val] = 1
         #if (i%10000 == 0): sys.stdout.write('.') 
     
-    vals = freq.keys()
-    vals.sort()
     
+    width = int(math.ceil(math.log(max,10)))
     formatstr = "{0:" + str(width) + "d} {1:6.5f} {2:8d} {3}"
     attractors = 0
+    
+    vals = freq.keys()
+    vals.sort()
     
     for i in vals:
         f = freq[i]
@@ -213,7 +277,8 @@ def sizeTable():
 #runMachine(4, tapes[254:255], tapes[130:135])
 #runMachine(1, tapes, tapes)
 
-runMonteCarlo(10, 1000)
+fsm = FSMachine(10)
+runMonteCarlo(fsm, 1000)
               
 #code.interact(local=locals())
             
