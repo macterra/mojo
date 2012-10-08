@@ -278,18 +278,23 @@ def runMonteCarlo(machine, N):
     print "strangeness {0:.4f} ({1:d} attractors)".format(1.*attractors/max, attractors)
     print "simulation took {0:.2f}s".format(elapsed)
     
-def sizeTable():
+def sizeTable(machineClass):
+    print "size table for {0}".format(machineClass.__name__)
     for i in range(1,65):
-        s = programSize(i)
-        print "{0:3d} {1:3d} {2:e}".format(i, s, 2**s)
+        m = machineClass(i)
+        s = m.programSize()
+        max = str(2**s)
+        approx = "{0}*10^{1}".format(max[0], len(max)-1)
+        print "{0:3d} {1:3d} {2}".format(i, s, approx)
 
-#sizeTable()
+sizeTable(FSMachine)
+sizeTable(StackMachine)
         
 #runMachine(4, tapes[254:255], tapes[130:135])
 #runMachine(1, tapes, tapes)
 
 #runMonteCarlo(FSMachine(2), 1000)
-runMonteCarlo(StackMachine(1), 100000)
+#runMonteCarlo(StackMachine(1), 100000)
               
 #code.interact(local=locals())
             
