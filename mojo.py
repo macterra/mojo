@@ -1,4 +1,4 @@
-import sys, code, random, math
+import sys, code, random, math, time
 
 def binary(s):
     return str(s) if s<=1 else binary(s>>1) + str(s&1)
@@ -235,6 +235,7 @@ def runMachine(size, programs, inputs):
 def runMonteCarlo(machine, N):
     # machine =
     # N = Monte Carlo iterations
+    start = time.time()
     max = 2**machine.programSize()
     bits = minBits(max)
     freq = {}
@@ -251,6 +252,7 @@ def runMonteCarlo(machine, N):
             freq[val] = 1
         #if (i%10000 == 0): sys.stdout.write('.') 
     
+    elapsed = time.time() - start
     
     width = int(math.ceil(math.log(max,10)))
     formatstr = "{0:" + str(width) + "d} {1:6.5f} {2:8d} {3}"
@@ -269,10 +271,12 @@ def runMonteCarlo(machine, N):
     hits = len(freq)
     total = max
     misses = max-hits
+    print "states: {0} program size: {1} max number: {2}".format(machine.states, machine.programSize(), max)
     print "hits: {0} ({1:.2f}%) misses: {2} ({3:.2f}%) total: {4}".format(hits, 100.*hits/total, misses, 100.*misses/total, total)   
     space = max**2
     print "{0:e} fraction sampled of space {1:e} with {2} samples".format(1.*N/space, space, N)
     print "strangeness {0:.4f} ({1:d} attractors)".format(1.*attractors/max, attractors)
+    print "simulation took {0:.2f}s".format(elapsed)
     
 def sizeTable():
     for i in range(1,65):
@@ -285,7 +289,7 @@ def sizeTable():
 #runMachine(1, tapes, tapes)
 
 #runMonteCarlo(FSMachine(2), 1000)
-runMonteCarlo(StackMachine(2), 100000)
+runMonteCarlo(StackMachine(1), 100000)
               
 #code.interact(local=locals())
             
