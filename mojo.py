@@ -94,8 +94,6 @@ class Tape:
         self.tape = self.tape[1:]
         return bit
         
-rnd = random.Random()
-
 class FSAction:
     def __init__(self, bits, tape):
         self.output = tape.read()
@@ -209,29 +207,7 @@ class StackMachine:
                 
         #print "running {0} on {1} yielded {2}".format(program, input, output)
         return output  
-    
-BITS = 8
-SIZE = 2**BITS
-
-tapes = []
-freq = [0] * SIZE
-
-for i in range(SIZE):
-    tapes.append(Tape(i))
-    
-#print tapes    
-
-def runMachine(size, programs, inputs):    
-    fsm = FSMachine(size)
-
-    for p in programs:
-        for i in inputs:
-            output = fsm.execute(p, i, BITS)
-            freq[int(output)] += 1
-            
-    for (t, f) in zip(tapes, freq):
-        print int(t), t, f
-        
+           
 def runMonteCarlo(machine, N):
     # machine =
     # N = Monte Carlo iterations
@@ -284,17 +260,17 @@ def sizeTable(machineClass):
         m = machineClass(i)
         s = m.programSize()
         max = str(2**s)
-        approx = "{0}*10^{1}".format(max[0], len(max)-1)
+        approx = "{0}e+{1}".format(max[0], len(max)-1)
         print "{0:3d} {1:3d} {2}".format(i, s, approx)
 
-sizeTable(FSMachine)
-sizeTable(StackMachine)
+#sizeTable(FSMachine)
+#sizeTable(StackMachine)
         
 #runMachine(4, tapes[254:255], tapes[130:135])
 #runMachine(1, tapes, tapes)
 
 #runMonteCarlo(FSMachine(2), 1000)
-#runMonteCarlo(StackMachine(1), 100000)
+runMonteCarlo(StackMachine(1), 100000)
               
 #code.interact(local=locals())
             
